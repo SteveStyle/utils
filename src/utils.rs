@@ -1,18 +1,15 @@
-use regex::Regex;
 use std::str::FromStr;
+use regex::Regex;
+use std::time::{Duration, Instant};
 
-pub mod pos;
-pub mod pos3d;
-/// To use this crate, add `utils = { path = "utils" }` to the dependencies in Cargo.toml.
-/// Alternatively, use the git repository by adding 'utils = { git = "https://github.com/SteveStyle/utils.git" }'
-pub mod timer;
+
 
 pub fn get_numbers<T: FromStr>(source: &str) -> Vec<T>
-where
-    T::Err: std::fmt::Debug, /* add to toml
-                             [dependencies]
-                             regex = "1.3.9"
-                             */
+where T::Err: std::fmt::Debug
+/* add to toml
+[dependencies]
+regex = "1.3.9" 
+*/
 {
     // Use a regular expression to match the first sequence of digits in the string
     // Support negative and floating point numbers.
@@ -23,5 +20,21 @@ where
         let number = digit_string.parse().unwrap();
         result.push(number);
     }
-    result
+    return result;
+}
+
+pub struct Timer<'a> {
+    name: &'a str,
+    start: Instant,
+}
+
+impl<'a> Timer<'a> {
+    pub fn new(name: &'a str) -> Timer<'a> {
+        let start = Instant::now();
+        Timer { name, start }
+    }
+
+    pub fn elapsed(&self) -> Duration {
+        Instant::now().duration_since(self.start)
+    }
 }
