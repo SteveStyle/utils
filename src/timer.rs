@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 use std::time::Instant;
-use std::{ops::Deref, time::Duration};
+use std::{ops::Deref, ops::DerefMut, time::Duration};
 
 pub struct Timed<T: Debug> {
     value: T,
@@ -11,8 +11,14 @@ pub struct Timed<T: Debug> {
 impl<T: Debug> Deref for Timed<T> {
     type Target = T;
 
-    fn deref(&self) -> &T {
+    fn deref(&self) -> &Self::Target {
         &self.value
+    }
+}
+
+impl<T: Debug> DerefMut for Timed<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.value
     }
 }
 
