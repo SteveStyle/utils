@@ -154,6 +154,26 @@ impl Direction {
     pub fn is_horizontal(&self) -> bool {
         matches!(self, Direction::Right | Direction::Left)
     }
+
+    pub fn turn_left(&self) -> Self {
+        match self {
+            Direction::Right => Direction::Up,
+            Direction::Down => Direction::Right,
+            Direction::Left => Direction::Down,
+            Direction::Up => Direction::Left,
+            Direction::Wait => Direction::Wait,
+        }
+    }
+
+    pub fn turn_right(&self) -> Self {
+        match self {
+            Direction::Right => Direction::Down,
+            Direction::Down => Direction::Left,
+            Direction::Left => Direction::Up,
+            Direction::Up => Direction::Right,
+            Direction::Wait => Direction::Wait,
+        }
+    }
 }
 
 impl<T: Num + ConstOne + ConstZero> Position<T> {
