@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 //use num_traits::Signed;
-use num_traits::{ConstOne, ConstZero, Num};
+use num_traits::{ConstOne, ConstZero, Num, Signed};
 use std::fmt::Debug;
 use std::ops::{Add, Sub};
 
@@ -22,7 +22,13 @@ impl<T: Num> Add for Position<T> {
 impl<T: Num +  Copy + PartialOrd + ConstOne + ConstZero> Add<Direction> for Position<T> {
     type Output = Self;
     fn add(self, other: Direction) -> Self {
-        self.add(other.to_position())
+        match other {
+            Direction::Right => Self{ x: self.x + T::ONE, y: self.y},
+            Direction::Left => Self{ x: self.x - T::ONE, y: self.y},
+            Direction::Up => Self{ x: self.x, y: self.y - T::ONE},
+            Direction::Down => Self{ x: self.x, y: self.y + T::ONE},
+            _ => self,
+        }
     }
 }
 impl<T: Num> Sub for Position<T> {
@@ -44,20 +50,26 @@ impl<T: Num + Copy> std::ops::Mul<T> for Position<T> {
     }
 }
 
+
 impl<T: Num +  Copy + PartialOrd + ConstOne> Position<T> {
+    fn abs_diff(a:T, b:T) -> T {
+        if a > b {
+            a - b
+        } else {
+            b - a
+        }
+    }
     pub fn new(x: T, y: T) -> Self {
         Self { x, y }
     }
     pub fn manhattan_distance(&self, other: &Self) -> T {
-        (self.x - other.x).abs() + (self.y - other.y).abs()
+        Self::abs_diff(self.x,    other.x) + Self::abs_diff(self.y, other.y)
     }
     pub fn is_adjacent(&self, other: &Self) -> bool {
-        let diff = *self - *other;
-        diff.x.abs() <= T::ONE && diff.y.abs() <= T::ONE
+        Self::abs_diff(self.x,    other.x) <= T::ONE && Self::abs_diff(self.y, other.y) <= T::ONE
     }
     pub fn is_orthogonal(&self, other: &Self) -> bool {
-        let diff = *self - *other;
-        diff.x.abs() <= T::ONE && diff.y.abs() <= T::ONE && diff.x.abs() != diff.y.abs()
+        Self::abs_diff(self.x,    other.x) + Self::abs_diff(self.y, other.y) == T::ONE        
     }
 }
 
@@ -98,7 +110,7 @@ impl Direction {
             _ => Direction::Wait,
         }
     }
-/*     pub fn to_position<T: Num +  Copy + PartialOrd + ConstOne + ConstZero>(
+     pub fn to_position<T: Num + Signed + Copy + PartialOrd + ConstOne + ConstZero>(
         &self,
     ) -> Position<T> {
         match self {
@@ -108,7 +120,7 @@ impl Direction {
             Direction::Up => Position::<T>::new(T::ZERO, -T::ONE),
             Direction::Wait => Position::<T>::new(T::ZERO, T::ZERO),
         }
-    } */
+    } 
     fn as_str(&self) -> &str {
         match self {
             Direction::Right => "Right",
