@@ -4,7 +4,7 @@ use num_traits::{ConstOne, ConstZero, Num, Signed};
 use std::fmt::Debug;
 use std::ops::{Add, Sub};
 
-#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, Default)]
 pub struct Position<T: Num> {
     pub x: T,
     pub y: T,
@@ -19,14 +19,26 @@ impl<T: Num> Add for Position<T> {
         }
     }
 }
-impl<T: Num +  Copy + PartialOrd + ConstOne + ConstZero> Add<Direction> for Position<T> {
+impl<T: Num + Copy + PartialOrd + ConstOne + ConstZero> Add<Direction> for Position<T> {
     type Output = Self;
     fn add(self, other: Direction) -> Self {
         match other {
-            Direction::Right => Self{ x: self.x + T::ONE, y: self.y},
-            Direction::Left => Self{ x: self.x - T::ONE, y: self.y},
-            Direction::Up => Self{ x: self.x, y: self.y - T::ONE},
-            Direction::Down => Self{ x: self.x, y: self.y + T::ONE},
+            Direction::Right => Self {
+                x: self.x + T::ONE,
+                y: self.y,
+            },
+            Direction::Left => Self {
+                x: self.x - T::ONE,
+                y: self.y,
+            },
+            Direction::Up => Self {
+                x: self.x,
+                y: self.y - T::ONE,
+            },
+            Direction::Down => Self {
+                x: self.x,
+                y: self.y + T::ONE,
+            },
             _ => self,
         }
     }
@@ -50,9 +62,8 @@ impl<T: Num + Copy> std::ops::Mul<T> for Position<T> {
     }
 }
 
-
-impl<T: Num +  Copy + PartialOrd + ConstOne> Position<T> {
-    fn abs_diff(a:T, b:T) -> T {
+impl<T: Num + Copy + PartialOrd + ConstOne> Position<T> {
+    fn abs_diff(a: T, b: T) -> T {
         if a > b {
             a - b
         } else {
@@ -62,14 +73,28 @@ impl<T: Num +  Copy + PartialOrd + ConstOne> Position<T> {
     pub fn new(x: T, y: T) -> Self {
         Self { x, y }
     }
+    pub fn new_from_position<U: Num + Copy + Into<T>>(other: Position<U>) -> Self {
+        Self {
+            x: T::from(other.x.into()),
+            y: T::from(other.y.into()),
+        }
+    }
+    pub fn new_try_from_position<U: Num + Copy + TryInto<T>>(
+        other: Position<U>,
+    ) -> Result<Self, <U as TryInto<T>>::Error> {
+        Ok(Self {
+            x: T::from(other.x.try_into()?),
+            y: T::from(other.y.try_into()?),
+        })
+    }
     pub fn manhattan_distance(&self, other: &Self) -> T {
-        Self::abs_diff(self.x,    other.x) + Self::abs_diff(self.y, other.y)
+        Self::abs_diff(self.x, other.x) + Self::abs_diff(self.y, other.y)
     }
     pub fn is_adjacent(&self, other: &Self) -> bool {
-        Self::abs_diff(self.x,    other.x) <= T::ONE && Self::abs_diff(self.y, other.y) <= T::ONE
+        Self::abs_diff(self.x, other.x) <= T::ONE && Self::abs_diff(self.y, other.y) <= T::ONE
     }
     pub fn is_orthogonal(&self, other: &Self) -> bool {
-        Self::abs_diff(self.x,    other.x) + Self::abs_diff(self.y, other.y) == T::ONE        
+        Self::abs_diff(self.x, other.x) + Self::abs_diff(self.y, other.y) == T::ONE
     }
 }
 
@@ -110,7 +135,7 @@ impl Direction {
             _ => Direction::Wait,
         }
     }
-     pub fn to_position<T: Num + Signed + Copy + PartialOrd + ConstOne + ConstZero>(
+    pub fn to_position<T: Num + Signed + Copy + PartialOrd + ConstOne + ConstZero>(
         &self,
     ) -> Position<T> {
         match self {
@@ -120,7 +145,7 @@ impl Direction {
             Direction::Up => Position::<T>::new(T::ZERO, -T::ONE),
             Direction::Wait => Position::<T>::new(T::ZERO, T::ZERO),
         }
-    } 
+    }
     fn as_str(&self) -> &str {
         match self {
             Direction::Right => "Right",
@@ -193,4 +218,33 @@ impl<T: Num + ConstOne + ConstZero> Position<T> {
     };
 
     pub const DIRECTIONS: [Self; 3] = [Self::RIGHT, Self::DOWN, Self::WAIT];
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_position() {
+        let p1 = Position::new(1, 1);
+        let p2 = Position::new(2, 2);
+        assert_eq!(p1 + p2, Position::new(3, 3));
+        assert_eq!(p2 - p1, Position::new(1, 1));
+        assert_eq!(p1 * 2, Position::new(2, 2));
+        assert_eq!(p1.manhattan_distance(&p2), 2);
+        assert_eq!(p1.is_adjacent(&p2), true);
+        assert_eq!(p1.is_orthogonal(&p2), false);
+    }
+    #[test]
+    fn try_conversions() {
+        let p1 = Position::<usize>::new(1, 1);
+        let p2 = Position::<i32>::new(2, 2);
+        assert_eq!(
+            p1 + Position::<usize>::new_try_from_position(p2).unwrap(),
+            Position::new(3, 3)
+        );
+        let p3 = Position::<usize>::new_try_from_position(p2).unwrap();
+        println!("{:?}", p3);
+        let p4: Position<usize> = Position::new_from_position(Position::<u16>::new(2, 2));
+        println!("{:?}", p4);
+    }
 }
