@@ -64,27 +64,23 @@ impl<T: Num + Copy> std::ops::Mul<T> for Position<T> {
 
 impl<T: Num + Copy + PartialOrd + ConstOne> Position<T> {
     fn abs_diff(a: T, b: T) -> T {
-        if a > b {
-            a - b
-        } else {
-            b - a
-        }
+        if a > b { a - b } else { b - a }
     }
     pub fn new(x: T, y: T) -> Self {
         Self { x, y }
     }
     pub fn new_from_position<U: Num + Copy + Into<T>>(other: Position<U>) -> Self {
         Self {
-            x: T::from(other.x.into()),
-            y: T::from(other.y.into()),
+            x: other.x.into(),
+            y: other.y.into(),
         }
     }
     pub fn new_try_from_position<U: Num + Copy + TryInto<T>>(
         other: Position<U>,
     ) -> Result<Self, <U as TryInto<T>>::Error> {
         Ok(Self {
-            x: T::from(other.x.try_into()?),
-            y: T::from(other.y.try_into()?),
+            x: other.x.try_into()?,
+            y: other.y.try_into()?,
         })
     }
     pub fn manhattan_distance(&self, other: &Self) -> T {
@@ -231,8 +227,8 @@ mod tests {
         assert_eq!(p2 - p1, Position::new(1, 1));
         assert_eq!(p1 * 2, Position::new(2, 2));
         assert_eq!(p1.manhattan_distance(&p2), 2);
-        assert_eq!(p1.is_adjacent(&p2), true);
-        assert_eq!(p1.is_orthogonal(&p2), false);
+        assert!(p1.is_adjacent(&p2));
+        assert!(!p1.is_orthogonal(&p2));
     }
     #[test]
     fn try_conversions() {
