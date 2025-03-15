@@ -1,12 +1,15 @@
 use regex::Regex;
 use std::str::FromStr;
 
+pub mod fixed_queue;
+pub mod grid;
+pub mod intersect_sorted_iterators;
 pub mod pos;
 pub mod pos3d;
-/// To use this crate, add `utils = { path = "utils" }` to the dependencies in Cargo.toml.
-/// Alternatively, use the git repository by adding 'utils = { git = "https://github.com/SteveStyle/utils.git" }'
 pub mod timer;
 
+/// To use this crate, add `stephen-morris_utils = { path = "stephen-morris-utils" }` to the dependencies in Cargo.toml.
+/// Alternatively, use the git repository by adding 'utils = { git = "https://github.com/SteveStyle/utils.git" }'
 pub fn get_numbers<T: FromStr>(source: &str) -> Vec<T>
 where
     T::Err: std::fmt::Debug, /* add to toml
