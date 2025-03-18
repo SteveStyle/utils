@@ -507,7 +507,7 @@ impl<T: Clone + Default + PartialEq> IndexMut<Point> for Grid<T> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Direction {
     North,
     East,
