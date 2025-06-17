@@ -1,9 +1,9 @@
 [package]
-name = "stephen_morris_utils"
+name = "utils"
 version = "0.1.1"
 edition = "2024"
 
 [dependencies]
-num = "0.4.3"
-num-traits = "0.2.19"
-regex = "1.11.1"
+num = "*"
+num-traits = "*"
+regex = "*"
