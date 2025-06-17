@@ -258,6 +258,10 @@ impl<T: Clone + Default + PartialEq> Grid<T> {
     pub fn iter(&self) -> GridIterRef<T> {
         self.into_iter()
     }
+
+    pub fn as_slice(&self) -> &[T] {
+        &self.data
+    }
 }
 
 impl<T: Clone + Default + PartialEq> From<Vec<Vec<T>>> for Grid<T> {
