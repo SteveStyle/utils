@@ -1,6 +1,7 @@
 use regex::Regex;
 use std::str::FromStr;
 
+pub mod bit_array;
 pub mod fixed_queue;
 pub mod grid;
 pub mod intersect_sorted_iterators;
