@@ -32,6 +32,36 @@ impl<T: PrimInt + BitOrAssign + BitAndAssign> BitFlags<T> {
     }
 }
 
+impl BitFlags<u64> {
+    pub fn lowest_bit_set(&self) -> Option<usize> {
+        let n = self.0;
+        if n == 0 {
+            return None;
+        }
+        let mut index = 0;
+        if n & 0xFFFFFFFF == 0 {
+            index += 32;
+        }
+        if n & 0x0000FFFF0000FFFF == 0 {
+            index += 16;
+        }
+        if n & 0x00FF00FF00FF00FF == 0 {
+            index += 8;
+        }
+        if n & 0x0F0F0F0F0F0F0F0F == 0 {
+            index += 4
+        }
+        if n & 0x3333_3333_3333_3333 == 0 {
+            index += 2
+        }
+        if n & 0x5555_5555_5555_5555 == 0 {
+            index += 1
+        }
+
+        Some(index)
+    }
+}
+
 impl<T: PrimInt + BitOrAssign + BitAndAssign> std::ops::BitAndAssign for BitFlags<T> {
     fn bitand_assign(&mut self, rhs: Self) {
         self.0 &= rhs.0;
