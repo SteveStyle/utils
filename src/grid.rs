@@ -1,6 +1,9 @@
 use std::{
     fmt::{self, Display, Formatter, Result},
-    ops::{Add, AddAssign, Index, IndexMut, Mul, MulAssign, Rem, RemAssign, Sub},
+    ops::{
+        Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Rem, RemAssign, Sub,
+        SubAssign,
+    },
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -47,11 +50,20 @@ impl Vector {
             y: self.y.abs(),
         }
     }
+    pub fn as_tuple(self) -> (isize, isize) {
+        (self.x, self.y)
+    }
 }
 
 impl From<Direction> for Vector {
     fn from(value: Direction) -> Self {
         Self::from_direction(value)
+    }
+}
+
+impl From<(isize, isize)> for Vector {
+    fn from(value: (isize, isize)) -> Self {
+        Self::new(value.0, value.1)
     }
 }
 
@@ -66,6 +78,42 @@ impl Add for Vector {
 impl AddAssign for Vector {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
+    }
+}
+
+impl Sub for Vector {
+    type Output = Vector;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+        }
+    }
+}
+
+impl SubAssign for Vector {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.x -= rhs.x;
+        self.y -= rhs.y;
+    }
+}
+
+impl Div<isize> for Vector {
+    type Output = Vector;
+
+    fn div(self, rhs: isize) -> Self::Output {
+        Self {
+            x: self.x / rhs,
+            y: self.y / rhs,
+        }
+    }
+}
+
+impl DivAssign<isize> for Vector {
+    fn div_assign(&mut self, rhs: isize) {
+        self.x /= rhs;
+        self.y /= rhs;
     }
 }
 
