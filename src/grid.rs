@@ -1,7 +1,7 @@
 use std::{
     fmt::{self, Display, Formatter, Result},
     ops::{
-        Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Rem, RemAssign, Sub,
+        Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Rem, RemAssign, Sub,
         SubAssign,
     },
 };
@@ -64,6 +64,17 @@ impl From<Direction> for Vector {
 impl From<(isize, isize)> for Vector {
     fn from(value: (isize, isize)) -> Self {
         Self::new(value.0, value.1)
+    }
+}
+
+impl Neg for Vector {
+    type Output = Vector;
+
+    fn neg(self) -> Self::Output {
+        Self {
+            x: -self.x,
+            y: -self.y,
+        }
     }
 }
 
@@ -213,6 +224,15 @@ impl Sub for Point {
             self.x as isize - rhs.x as isize,
             self.y as isize - rhs.y as isize,
         )
+    }
+}
+
+impl Sub<Vector> for Point {
+    type Output = Option<Point>;
+
+    fn sub(self, rhs: Vector) -> Self::Output {
+        let v = -rhs;
+        self + v
     }
 }
 
