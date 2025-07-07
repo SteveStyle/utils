@@ -30,7 +30,6 @@ where
             Self::Empty
         }
     }
-    #[allow(dead_code)]
     pub fn new_from_size(min_value: T, size_value: T) -> Self {
         Self::Interval(min_value, min_value + size_value - T::one())
     }
@@ -85,8 +84,7 @@ impl<T> From<[T; 0]> for Interval<T>
 where
     T: PrimInt + Signed,
 {
-    #[allow(unused_variables)]
-    fn from(value: [T; 0]) -> Self {
+    fn from(_: [T; 0]) -> Self {
         Interval::Empty
     }
 }
@@ -124,7 +122,6 @@ where
     pub fn new() -> Self {
         Self(Vec::new())
     }
-    #[allow(dead_code)]
     pub fn from_array<const N: usize>(arr: [[T; 2]; N]) -> IntervalUnion<T> {
         Self(arr.iter().map(|i| (*i).into()).collect())
     }
