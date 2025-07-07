@@ -4,6 +4,7 @@ use std::str::FromStr;
 pub mod bit_array;
 pub mod fixed_queue;
 pub mod grid;
+pub mod integer_interval;
 pub mod intersect_sorted_iterators;
 pub mod pos;
 pub mod pos3d;
