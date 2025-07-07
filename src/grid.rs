@@ -53,6 +53,9 @@ impl Vector {
     pub fn as_tuple(self) -> (isize, isize) {
         (self.x, self.y)
     }
+    pub fn manhattan(self) -> isize {
+        self.x.abs() + self.y.abs()
+    }
 }
 
 impl From<Direction> for Vector {
