@@ -122,32 +122,46 @@ where
     pub fn new() -> Self {
         Self(Vec::new())
     }
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self(Vec::with_capacity(capacity))
+    }
     pub fn from_array<const N: usize>(arr: [[T; 2]; N]) -> IntervalUnion<T> {
         Self(arr.iter().map(|i| (*i).into()).collect())
     }
-    pub fn from_vec(mut v: Vec<Interval<T>>) -> Self {
-        if v.is_empty() {
-            return Self(Vec::new());
+    pub fn from_vec(v: Vec<Interval<T>>) -> Self {
+        let mut result = Self(v);
+        result.0.sort();
+        result.compact();
+        result
+    }
+    fn compact(&mut self) {
+        // Intended to be called by constructors and similar after adding elements to
+        // the vecor.
+        // A precondition is that the vector is sorted, with empty intervals at the end and other
+        // intervals ordered by min value.  So normally self.0.sort() will be called first.
+        // It compacts the vector, removing empty intervals and merging others where possible.
+        if self.0.is_empty() {
+            return;
         }
-        v.sort();
-        if v[0] == Interval::Empty {
-            return Self(Vec::new());
+        if self.0[0] == Interval::Empty {
+            self.0.clear();
+            return;
         }
         let mut updating = 0;
         let mut reading = 1;
-        while reading < v.len() {
-            match (v[updating], v[reading]) {
+        while reading < self.0.len() {
+            match (self.0[updating], self.0[reading]) {
                 (Interval::Interval(_, umax), Interval::Interval(rmin, _))
                     if rmin > umax + T::one() =>
                 {
                     updating += 1;
                     if reading != updating {
-                        v[updating] = v[reading];
+                        self.0[updating] = self.0[reading];
                     }
                     reading += 1;
                 }
                 (Interval::Interval(umin, umax), Interval::Interval(_, rmax)) => {
-                    v[updating] = Interval::Interval(umin, umax.max(rmax));
+                    self.0[updating] = Interval::Interval(umin, umax.max(rmax));
                     reading += 1;
                 }
                 (Interval::Interval(_, _), Interval::Empty) => {
@@ -156,8 +170,7 @@ where
                 (Interval::Empty, _) => unreachable!(),
             }
         }
-        v.truncate(updating + 1);
-        Self(v)
+        self.0.truncate(updating + 1);
     }
     pub fn size(&self) -> T {
         self.0.iter().map(|i| i.size()).sum()
@@ -172,6 +185,9 @@ where
     pub fn iter(&self) -> impl Iterator<Item = Interval<T>> {
         self.0.iter().filter_map(|&i| i.as_option())
     }
+    pub fn clear(&mut self) {
+        self.0.clear();
+    }
 }
 
 ///
@@ -180,15 +196,6 @@ where
 /// This From implementation will accept anything that can be converted
 /// into a slice of Interval<T>
 ///
-impl<T> Default for IntervalUnion<T>
-where
-    T: PrimInt + Signed + Sum,
-{
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl<S, T> From<S> for IntervalUnion<T>
 where
     T: PrimInt + Signed + Sum,
@@ -206,6 +213,27 @@ where
             }
         }
         result
+    }
+}
+
+impl<T> Extend<Interval<T>> for IntervalUnion<T>
+where
+    T: PrimInt + Signed + Sum,
+{
+    fn extend<I: IntoIterator<Item = Interval<T>>>(&mut self, iter: I) {
+        self.0
+            .extend(iter.into_iter().filter_map(|i| i.as_option()));
+        self.0.sort();
+        self.compact();
+    }
+}
+
+impl<T> Default for IntervalUnion<T>
+where
+    T: PrimInt + Signed + Sum,
+{
+    fn default() -> Self {
+        Self::new()
     }
 }
 
