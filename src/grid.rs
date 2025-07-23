@@ -582,6 +582,20 @@ impl<T: Clone + Default + PartialEq> IndexMut<Point> for Grid<T> {
     }
 }
 
+impl<T: Clone + Default + PartialEq> Index<(usize, usize)> for Grid<T> {
+    type Output = T;
+
+    fn index(&self, (x, y): (usize, usize)) -> &Self::Output {
+        self.get(Point::new(x, y))
+    }
+}
+
+impl<T: Clone + Default + PartialEq> IndexMut<(usize, usize)> for Grid<T> {
+    fn index_mut(&mut self, (x, y): (usize, usize)) -> &mut Self::Output {
+        self.get_mut(Point::new(x, y))
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Direction {
     North,
