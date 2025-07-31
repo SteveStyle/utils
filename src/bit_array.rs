@@ -7,10 +7,16 @@ use std::ops::{
 
 use num_traits::PrimInt;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
 pub struct BitFlags<T: PrimInt + BitOrAssign>(pub T);
 
-impl<T: PrimInt + BitOrAssign + BitAndAssign> BitFlags<T> {
+impl<T: PrimInt + BitOrAssign> From<T> for BitFlags<T> {
+    fn from(value: T) -> Self {
+        BitFlags(value)
+    }
+}
+
+impl<T: PrimInt + BitOrAssign + BitAndAssign + IntLog> BitFlags<T> {
     pub fn new() -> Self {
         Self(T::zero())
     }
@@ -30,35 +36,63 @@ impl<T: PrimInt + BitOrAssign + BitAndAssign> BitFlags<T> {
             self.unset(index);
         }
     }
+    pub fn iter(&self) -> BitFlagsIterator<T> {
+        BitFlagsIterator::new(self)
+    }
 }
 
-impl BitFlags<u64> {
-    pub fn lowest_bit_set(&self) -> Option<usize> {
-        let n = self.0;
-        if n == 0 {
+pub struct BitFlagsIterator<'a, T: PrimInt + BitOrAssign> {
+    index: usize,
+    highest_bit: usize,
+    bit_flags: &'a BitFlags<T>,
+}
+
+impl<'a, T: PrimInt + BitOrAssign + IntLog> BitFlagsIterator<'a, T> {
+    fn new(bit_flags: &'a BitFlags<T>) -> Self {
+        let highest_bit = bit_flags.highest_bit_set().unwrap_or(0);
+        Self {
+            index: 0,
+            highest_bit,
+            bit_flags,
+        }
+    }
+}
+
+impl<'a, T: PrimInt + BitOrAssign + BitAndAssign + IntLog> Iterator for BitFlagsIterator<'a, T> {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.index <= self.highest_bit && !self.bit_flags.get(self.index) {
+            self.index += 1;
+        }
+        let result = if self.bit_flags.get(self.index) {
+            Some(self.index)
+        } else {
+            None
+        };
+        self.index += 1;
+        result
+    }
+}
+
+use ilog::IntLog;
+
+impl<T: PrimInt + BitOrAssign + IntLog> BitFlags<T> {
+    pub fn highest_bit_set(&self) -> Option<usize> {
+        // return the index of the highest bit set in the bit flags
+        if self.0 == T::zero() {
             return None;
         }
-        let mut index = 0;
-        if n & 0xFFFFFFFF == 0 {
-            index += 32;
+        Some(self.0.log2())
+    }
+}
+impl<T: PrimInt + BitOrAssign> BitFlags<T> {
+    pub fn lowest_bit_set(&self) -> Option<usize> {
+        // return the index of the lowest bit set in the bit flags
+        if self.0 == T::zero() {
+            return None;
         }
-        if n & 0x0000FFFF0000FFFF == 0 {
-            index += 16;
-        }
-        if n & 0x00FF00FF00FF00FF == 0 {
-            index += 8;
-        }
-        if n & 0x0F0F0F0F0F0F0F0F == 0 {
-            index += 4
-        }
-        if n & 0x3333_3333_3333_3333 == 0 {
-            index += 2
-        }
-        if n & 0x5555_5555_5555_5555 == 0 {
-            index += 1
-        }
-
-        Some(index)
+        Some(self.0.trailing_zeros() as usize)
     }
 }
 

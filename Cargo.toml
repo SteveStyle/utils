@@ -4,6 +4,7 @@ version = "0.1.1"
 edition = "2024"
 
 [dependencies]
+ilog = "1.0.1"
 num = "*"
 num-traits = "*"
 regex = "*"
