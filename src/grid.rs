@@ -12,7 +12,7 @@ pub struct Vector {
     pub y: isize,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Point {
     pub x: usize,
     pub y: usize,
@@ -31,7 +31,7 @@ impl From<Point> for Vector {
 }
 
 impl Vector {
-    pub fn new(x: isize, y: isize) -> Self {
+    pub const fn new(x: isize, y: isize) -> Self {
         Self { x, y }
     }
 
@@ -194,6 +194,12 @@ impl From<Vector> for Point {
     }
 }
 
+impl From<(usize, usize)> for Point {
+    fn from((x, y): (usize, usize)) -> Self {
+        Self { x, y }
+    }
+}
+
 impl Add<Vector> for Point {
     type Output = Option<Point>;
 
@@ -208,6 +214,13 @@ impl Add<Vector> for Point {
         } else {
             None
         }
+    }
+}
+
+impl AddAssign<Vector> for Point {
+    fn add_assign(&mut self, rhs: Vector) {
+        let result = (*self + rhs).unwrap();
+        *self = result;
     }
 }
 
