@@ -36,7 +36,7 @@ impl<T: PrimInt + BitOrAssign + BitAndAssign + IntLog> BitFlags<T> {
             self.unset(index);
         }
     }
-    pub fn iter(&self) -> BitFlagsIterator<T> {
+    pub fn iter<'a>(&'a self) -> BitFlagsIterator<'a, T> {
         BitFlagsIterator::new(self)
     }
 }

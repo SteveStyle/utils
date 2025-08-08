@@ -339,7 +339,7 @@ impl<T: Clone + Default + PartialEq> Grid<T> {
             Direction::Wait => true,
         }
     }
-    pub fn iter(&self) -> GridIterRef<T> {
+    pub fn iter(&'_ self) -> GridIterRef<'_, T> {
         self.into_iter()
     }
 
@@ -564,7 +564,7 @@ impl<'a, T: Clone + Default + PartialEq> Iterator for DiagonalNeighbors<'a, T> {
 }
 
 impl<T: Clone + Default + PartialEq> Grid<T> {
-    pub fn orthogonal_neighbors(&self, center: Point) -> OrthogonalNeighbors<T> {
+    pub fn orthogonal_neighbors(&'_ self, center: Point) -> OrthogonalNeighbors<'_, T> {
         OrthogonalNeighbors {
             grid: self,
             center,
@@ -572,7 +572,7 @@ impl<T: Clone + Default + PartialEq> Grid<T> {
         }
     }
 
-    pub fn all_neighbors(&self, center: Point) -> DiagonalNeighbors<T> {
+    pub fn all_neighbors(&'_ self, center: Point) -> DiagonalNeighbors<'_, T> {
         DiagonalNeighbors {
             grid: self,
             center,
