@@ -4,7 +4,12 @@ version = "0.1.1"
 edition = "2024"
 
 [dependencies]
+thiserror="2"
+anyhow="1"
+tracing-error="0.2"
+miette="6"
 ilog = "1.0.1"
 num = "*"
 num-traits = "*"
 regex = "*"
+

@@ -1,15 +1,15 @@
 use regex::Regex;
 use std::str::FromStr;
 
-pub mod bit_array;
+pub mod bit_flags;
 pub mod fixed_queue;
 pub mod grid;
+pub mod indexed_key_table;
 pub mod integer_interval;
 pub mod intersect_sorted_iterators;
 pub mod pos;
 pub mod pos3d;
 pub mod timer;
-pub mod indexed_key_table;
 
 /// To use this crate, add `stephen-morris_utils = { path = "stephen-morris-utils" }` to the dependencies in Cargo.toml.
 /// Alternatively, use the git repository by adding 'utils = { git = "https://github.com/SteveStyle/utils.git" }'

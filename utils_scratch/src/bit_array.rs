@@ -15,7 +15,8 @@ pub type Result<T> = std::result::Result<T, BitArrayError>;
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct BitArray<const NO_BYTES: usize> {
     bytes: [u8; NO_BYTES],
-    max_index: usize,
+    max_index: usize, // the largest index value tracked by this object,
+                      // values for indexes above this are initialised but not meaningful
 }
 
 impl<const NO_BYTES: usize> Debug for BitArray<NO_BYTES> {
@@ -53,12 +54,16 @@ impl<const NO_BYTES: usize> IndexMut<usize> for BitArray<NO_BYTES> {
 }
 
 impl<const NO_BYTES: usize> BitArray<NO_BYTES> {
-    const MAX_INDEX: usize = NO_BYTES * 8;
+    // the largest index value that does not produce UB
+    // This may be larger than self.max_index which
+    // is can be specified at run time.
+    const MAX_INDEX: usize = NO_BYTES * 8 - 1;
+    // checks that an index value does not produce UB
     fn check_index(index: usize) -> Result<()> {
-        if index >= Self::MAX_INDEX {
+        if index > Self::MAX_INDEX {
             return Err(BitArrayError::InvalidIndex {
                 index,
-                max_index: Self::MAX_INDEX - 1,
+                max_index: Self::MAX_INDEX,
             });
         }
         Ok(())
@@ -72,8 +77,12 @@ impl<const NO_BYTES: usize> BitArray<NO_BYTES> {
         })
     }
 
+    pub fn len(&self) -> usize {
+        self.max_index
+    }
+
     unsafe fn unchecked_get_bit(&self, index: usize) -> bool {
-        //SAFETY: the caller must ensure the index is less than MAX_INDEX
+        //SAFETY: the caller must ensure the index is no greater than MAX_INDEX
         let result = unsafe { self.bytes.get_unchecked(index / 8) } & (1 << (index % 8));
         result != 0
     }
@@ -82,6 +91,7 @@ impl<const NO_BYTES: usize> BitArray<NO_BYTES> {
         Ok(unsafe { self.unchecked_get_bit(index) })
     }
     unsafe fn unchecked_set_bit(&mut self, index: usize) {
+        //SAFETY: the caller must ensure the index is no greater than MAX_INDEX
         *unsafe { self.bytes.get_unchecked_mut(index / 8) } |= 1 << (index % 8);
     }
     pub fn set_bit(&mut self, index: usize) -> Result<()> {
@@ -92,6 +102,7 @@ impl<const NO_BYTES: usize> BitArray<NO_BYTES> {
         Ok(())
     }
     unsafe fn unchecked_unset_bit(&mut self, index: usize) {
+        //SAFETY: the caller must ensure the index is no greater than MAX_INDEX
         *unsafe { self.bytes.get_unchecked_mut(index / 8) } &= !(1 << (index % 8));
     }
     pub fn unset_bit(&mut self, index: usize) -> Result<()> {
@@ -101,6 +112,7 @@ impl<const NO_BYTES: usize> BitArray<NO_BYTES> {
         }
         Ok(())
     }
+    #[inline(never)]
     pub fn set_bit_repeating(&mut self, first_index: usize, interval: usize) -> Result<()> {
         let mut index = first_index;
         while index <= self.max_index {

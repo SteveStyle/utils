@@ -1,0 +1,10 @@
+[package]
+name = "utils_scratch"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+thiserror="2"
+
+[profile.release]
+debug=2
