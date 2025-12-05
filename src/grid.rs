@@ -512,9 +512,16 @@ pub struct OrthogonalNeighbors<'a, T: Clone + Default + PartialEq> {
     current_direction: usize,
 }
 
-pub struct DiagonalNeighbors<'a, T: Clone + Default + PartialEq> {
+pub struct AllNeighbors<'a, T: Clone + Default + PartialEq> {
     grid: &'a Grid<T>,
     center: Point,
+    current_direction: usize,
+}
+
+pub struct AllNeighborPoints {
+    center: Point,
+    height: usize,
+    width: usize,
     current_direction: usize,
 }
 
@@ -536,7 +543,7 @@ impl<'a, T: Clone + Default + PartialEq> Iterator for OrthogonalNeighbors<'a, T>
     }
 }
 
-impl<'a, T: Clone + Default + PartialEq> Iterator for DiagonalNeighbors<'a, T> {
+impl<'a, T: Clone + Default + PartialEq> Iterator for AllNeighbors<'a, T> {
     type Item = (Point, &'a T);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -563,6 +570,35 @@ impl<'a, T: Clone + Default + PartialEq> Iterator for DiagonalNeighbors<'a, T> {
     }
 }
 
+impl Iterator for AllNeighborPoints {
+    type Item = Point;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        const DIRECTIONS: [(isize, isize); 8] = [
+            (0, -1),
+            (1, -1),
+            (1, 0),
+            (1, 1),
+            (0, 1),
+            (-1, 1),
+            (-1, 0),
+            (-1, -1),
+        ];
+
+        while self.current_direction < DIRECTIONS.len() {
+            let (dx, dy) = DIRECTIONS[self.current_direction];
+            self.current_direction += 1;
+
+            if let Some(p) = self.center + Vector::new(dx, dy) {
+                if p.x < self.width && p.y < self.height {
+                    return Some(p);
+                }
+            }
+        }
+        None
+    }
+}
+
 impl<T: Clone + Default + PartialEq> Grid<T> {
     pub fn orthogonal_neighbors(&'_ self, center: Point) -> OrthogonalNeighbors<'_, T> {
         OrthogonalNeighbors {
@@ -572,10 +608,19 @@ impl<T: Clone + Default + PartialEq> Grid<T> {
         }
     }
 
-    pub fn all_neighbors(&'_ self, center: Point) -> DiagonalNeighbors<'_, T> {
-        DiagonalNeighbors {
+    pub fn all_neighbors(&'_ self, center: Point) -> AllNeighbors<'_, T> {
+        AllNeighbors {
             grid: self,
             center,
+            current_direction: 0,
+        }
+    }
+
+    pub fn all_neighbor_points(&self, center: Point) -> AllNeighborPoints {
+        AllNeighborPoints {
+            center,
+            height: self.height,
+            width: self.width,
             current_direction: 0,
         }
     }
