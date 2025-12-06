@@ -45,6 +45,12 @@ where
             Interval::Empty => None,
         }
     }
+    pub fn contains(&self, value: T) -> bool {
+        match self {
+            Interval::Interval(min, max) => *min <= value && value <= *max,
+            Interval::Empty => false,
+        }
+    }
 }
 
 impl<T> From<Option<Interval<T>>> for Interval<T>
@@ -187,6 +193,35 @@ where
     }
     pub fn clear(&mut self) {
         self.0.clear();
+    }
+    pub fn contains(&self, value: T) -> bool {
+        self.0.iter().any(|i| i.contains(value))
+    }
+    pub fn count_contains(&self, values: Vec<T>) -> usize {
+        let mut intervals_iter = self.0.iter();
+        let mut values_iter = values.iter();
+        let mut interval_option = intervals_iter.next();
+        let mut value_option = values_iter.next();
+        let mut count = 0;
+        loop {
+            match (interval_option, value_option) {
+                (None, None) => break,
+                (None, Some(_)) => break,
+                (Some(_), None) => break,
+                (Some(interval), Some(value)) => match interval {
+                    Interval::Empty => interval_option = intervals_iter.next(),
+                    Interval::Interval(min, _) if value < min => value_option = values_iter.next(),
+                    Interval::Interval(_, max) if value > max => {
+                        interval_option = intervals_iter.next()
+                    }
+                    Interval::Interval(_, _) => {
+                        count += 1;
+                        value_option = values_iter.next();
+                    }
+                },
+            }
+        }
+        count
     }
 }
 
