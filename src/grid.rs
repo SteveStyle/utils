@@ -35,7 +35,7 @@ impl Vector {
         Self { x, y }
     }
 
-    pub fn from_direction(dir: Direction) -> Self {
+    pub const fn from_direction(dir: Direction) -> Self {
         match dir {
             Direction::East => Vector::new(1, 0),
             Direction::South => Vector::new(0, 1),
@@ -623,6 +623,20 @@ impl<T: Clone + Default + PartialEq> Grid<T> {
             width: self.width,
             current_direction: 0,
         }
+    }
+}
+
+impl<T: Clone + Default + PartialEq> Index<usize> for Grid<T> {
+    type Output = [T];
+
+    fn index(&self, y: usize) -> &Self::Output {
+        &self.data[self.width * y..self.width * (y + 1)]
+    }
+}
+
+impl<T: Clone + Default + PartialEq> IndexMut<usize> for Grid<T> {
+    fn index_mut(&mut self, y: usize) -> &mut Self::Output {
+        &mut self.data[self.width * y..self.width * (y + 1)]
     }
 }
 
