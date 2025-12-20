@@ -9,6 +9,8 @@ pub mod integer_interval;
 pub mod intersect_sorted_iterators;
 pub mod pos;
 pub mod pos3d;
+pub mod smallest_items;
+pub mod smallvec;
 pub mod timer;
 
 /// To use this crate, add `stephen-morris_utils = { path = "stephen-morris-utils" }` to the dependencies in Cargo.toml.
