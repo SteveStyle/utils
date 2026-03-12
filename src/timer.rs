@@ -30,6 +30,9 @@ impl<T: Debug> Timed<T> {
             tag: String::from(tag),
         }
     }
+    pub fn duration(&self) -> Duration {
+        self.duration
+    }
     pub fn print_duration(&self) {
         println!("{} duration: {:?}", self.tag, self.duration);
     }

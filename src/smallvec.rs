@@ -1,3 +1,4 @@
+use num_traits::ConstZero;
 use std::ops::{Index, IndexMut};
 
 #[derive(Copy, Clone, Debug)]
@@ -39,6 +40,16 @@ impl<T: Copy + Default + Sized, const N: usize> IndexMut<usize> for SmallVec<T, 
 }
 
 impl<T: Default + Copy + Default + Sized, const N: usize> SmallVec<T, N> {
+    pub const fn new_empty() -> Self
+    where
+        T: ConstZero,
+    {
+        SmallVec {
+            data: [T::ZERO; N],
+            length: 0,
+        }
+    }
+
     pub fn new() -> Self {
         assert!(N > 0, "SmallVec must have non-zero capacity");
 
@@ -59,6 +70,15 @@ impl<T: Default + Copy + Default + Sized, const N: usize> SmallVec<T, N> {
     pub fn pop(&mut self) -> T {
         self.length -= 1;
         self.data[self.length]
+    }
+    pub fn last(&self) -> Option<&T> {
+        self.as_slice().last()
+    }
+    pub fn last_mut(&mut self) -> Option<&mut T> {
+        self.as_slice_mut().last_mut()
+    }
+    pub fn split_mut_at_end(&mut self) -> (&mut [T], &mut [T]) {
+        self.data.split_at_mut(self.length)
     }
     pub fn clear(&mut self) {
         self.length = 0;
