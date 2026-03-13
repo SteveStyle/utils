@@ -37,7 +37,7 @@ where
     F: ForeignKey,
     E: Entry<K, F>,
 {
-    fn key2index(&self, key: &K) -> usize {
+    pub fn key2index(&self, key: &K) -> usize {
         let mut floor = 0;
         let mut above = self.0.len();
         while floor < above {
