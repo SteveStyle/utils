@@ -6,7 +6,7 @@ use std::{
     },
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Vector {
     pub x: isize,
     pub y: isize,
@@ -668,8 +668,9 @@ impl<T: Clone + Default + PartialEq> IndexMut<(usize, usize)> for Grid<T> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Direction {
+    #[default]
     North,
     East,
     South,
@@ -682,6 +683,15 @@ pub const EAST: usize = Direction::East as usize;
 pub const SOUTH: usize = Direction::South as usize;
 pub const WEST: usize = Direction::West as usize;
 pub const WAIT: usize = Direction::Wait as usize;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+
+pub enum Turn {
+    Straight = 0,
+    Right,
+    Reverse,
+    Left,
+}
 
 impl Direction {
     pub fn left(&self) -> Self {
@@ -711,6 +721,14 @@ impl Direction {
             Direction::Wait => Direction::Wait,
         }
     }
+    pub fn turn(&self, turn: Turn) -> Self {
+        match turn {
+            Turn::Straight => *self,
+            Turn::Right => self.right(),
+            Turn::Reverse => self.reverse(),
+            Turn::Left => self.left(),
+        }
+    }
     pub fn try_from_char(c: char) -> Option<Self> {
         match c {
             '>' => Some(Direction::East),
@@ -719,6 +737,20 @@ impl Direction {
             '^' => Some(Direction::North),
             _ => None,
         }
+    }
+}
+
+impl Add<Turn> for Direction {
+    type Output = Direction;
+
+    fn add(self, rhs: Turn) -> Self::Output {
+        self.turn(rhs)
+    }
+}
+
+impl AddAssign<Turn> for Direction {
+    fn add_assign(&mut self, rhs: Turn) {
+        *self = *self + rhs;
     }
 }
 
