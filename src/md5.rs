@@ -7,6 +7,9 @@ pub fn md5_hex(input: &str) -> String {
 }
 
 pub fn md5(input: &[u8]) -> [u8; 16] {
+    md5_via_vec(&mut input.to_vec())
+}
+pub fn md5_via_vec(input: &mut Vec<u8>) -> [u8; 16] {
     // // : All variables are unsigned 32 bit and wrap modulo 2^32 when calculating
     // var int s[64], K[64]
     // var int i
@@ -84,7 +87,9 @@ pub fn md5(input: &[u8]) -> [u8; 16] {
     // assume the length is less than 2^64, otherwise how would we store it in a vector?
     let original_bit_length = (input.len() as u64) * 8;
 
-    let mut input: Vec<u8> = input.to_vec(); // copy input to a new Vec
+    // CHANGED to use passed in vector
+    // let mut input: Vec<u8> = input.to_vec(); // copy input to a new Vec
+
     input.push(0x80);
 
     //  512 bits = 64 bytes, 64 bits = 8 bytes
