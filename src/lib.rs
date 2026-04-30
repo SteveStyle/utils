@@ -7,6 +7,7 @@ pub mod grid;
 pub mod indexed_key_table;
 pub mod integer_interval;
 pub mod intersect_sorted_iterators;
+pub mod md5;
 pub mod pos;
 pub mod pos3d;
 pub mod smallest_items;
