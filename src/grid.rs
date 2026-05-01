@@ -431,6 +431,18 @@ impl Grid<u8> {
     }
 }
 
+impl Display for Grid<u8> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        for y in 0..self.height {
+            for x in 0..self.width {
+                write!(f, "{}", *self.get(Point::new(x, y)) as char)?;
+            }
+            writeln!(f)?;
+        }
+        Ok(())
+    }
+}
+
 pub struct GridIter<T: Clone + Default + PartialEq> {
     grid: Grid<T>,
     current: Point,
