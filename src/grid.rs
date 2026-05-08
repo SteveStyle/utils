@@ -523,6 +523,12 @@ pub struct OrthogonalNeighbors<'a, T: Clone + Default + PartialEq> {
     center: Point,
     current_direction: usize,
 }
+pub struct OrthogonalNeighborsPoints {
+    height: usize,
+    width: usize,
+    center: Point,
+    current_direction: usize,
+}
 
 pub struct AllNeighbors<'a, T: Clone + Default + PartialEq> {
     grid: &'a Grid<T>,
@@ -549,6 +555,25 @@ impl<'a, T: Clone + Default + PartialEq> Iterator for OrthogonalNeighbors<'a, T>
 
             if let Some(p) = self.grid.add_vector(self.center, Vector::new(dx, dy)) {
                 return Some((p, &self.grid[p]));
+            }
+        }
+        None
+    }
+}
+impl Iterator for OrthogonalNeighborsPoints {
+    type Item = Point;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        const DIRECTIONS: [(isize, isize); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
+
+        while self.current_direction < DIRECTIONS.len() {
+            let (dx, dy) = DIRECTIONS[self.current_direction];
+            self.current_direction += 1;
+
+            if let Some(p) = self.center + Vector::new(dx, dy) {
+                if p.x < self.width && p.y < self.height {
+                    return Some(p);
+                }
             }
         }
         None
@@ -617,6 +642,14 @@ impl<T: Clone + Default + PartialEq> Grid<T> {
             grid: self,
             center,
             current_direction: 0,
+        }
+    }
+    pub fn orthogonal_neighbors_points(&'_ self, center: Point) -> OrthogonalNeighborsPoints {
+        OrthogonalNeighborsPoints {
+            center,
+            current_direction: 0,
+            height: self.height,
+            width: self.width,
         }
     }
 
