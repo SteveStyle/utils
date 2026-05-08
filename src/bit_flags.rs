@@ -39,6 +39,12 @@ impl<T: PrimInt + BitOrAssign + BitAndAssign + IntLog> BitFlags<T> {
     pub fn iter<'a>(&'a self) -> BitFlagsIterator<'a, T> {
         BitFlagsIterator::new(self)
     }
+    pub fn count_ones(&self) -> u32 {
+        self.0.count_ones()
+    }
+    pub fn count_zeros(&self) -> u32 {
+        self.0.count_zeros()
+    }
 }
 
 pub struct BitFlagsIterator<'a, T: PrimInt + BitOrAssign> {
