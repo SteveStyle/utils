@@ -10,6 +10,11 @@ pub fn md5(input: &[u8]) -> [u8; 16] {
     md5_via_vec(&mut input.to_vec())
 }
 pub fn md5_via_vec(input: &mut Vec<u8>) -> [u8; 16] {
+    let mut hash = [0; 16];
+    md5_via_vec_buffer(input, &mut hash);
+    hash
+}
+pub fn md5_via_vec_buffer(input: &mut Vec<u8>, hash: &mut [u8; 16]) {
     // // : All variables are unsigned 32 bit and wrap modulo 2^32 when calculating
     // var int s[64], K[64]
     // var int i
@@ -183,13 +188,11 @@ pub fn md5_via_vec(input: &mut Vec<u8>) -> [u8; 16] {
         // end for
     }
     // var char digest[16] := a0 append b0 append c0 append d0 // (Output is in little-endian)
-    let mut result: [u8; 16] = [0; 16];
-    result[0..4].copy_from_slice(&a0.to_le_bytes());
-    result[4..8].copy_from_slice(&b0.to_le_bytes());
-    result[8..12].copy_from_slice(&c0.to_le_bytes());
-    result[12..16].copy_from_slice(&d0.to_le_bytes());
-
-    result
+    *hash = [0; 16];
+    hash[0..4].copy_from_slice(&a0.to_le_bytes());
+    hash[4..8].copy_from_slice(&b0.to_le_bytes());
+    hash[8..12].copy_from_slice(&c0.to_le_bytes());
+    hash[12..16].copy_from_slice(&d0.to_le_bytes());
 }
 
 #[cfg(test)]
