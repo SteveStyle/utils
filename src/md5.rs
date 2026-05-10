@@ -98,7 +98,7 @@ pub fn md5_via_vec_buffer(input: &mut Vec<u8>, hash: &mut [u8; 16]) {
     input.push(0x80);
 
     //  512 bits = 64 bytes, 64 bits = 8 bytes
-    let new_size = (((input.len() + 8) / 64) + 1) * 64 - 8;
+    let new_size = (((input.len() + 7) / 64) + 1) * 64 - 8;
     input.resize(new_size, 0);
 
     // while input.len() % 64 != 56 {
@@ -216,8 +216,18 @@ mod tests {
             md5_hex("The quick brown fox jumps over the lazy dog."),
             "e4d909c290d0fb1ca068ffaddf22cbd0"
         );
-        // MD5("The quick brown fox jumps over the lazy dog.") =
-        // e4d909c290d0fb1ca068ffaddf22cbd0
         assert_eq!(md5_hex("abcdef1"), "5f8b62a2dced0cd28946a9c891ff3e5e");
+    }
+
+    #[test]
+    fn long_message() {
+        let mut hash = [0; 16];
+        let mut message = "hello".as_bytes().to_vec();
+        for _ in 0..10 {
+            message.append(&mut message.clone());
+        }
+        println!("message length = {}", message.len());
+        md5_via_vec_buffer(&mut message, &mut hash);
+        println!("message length = {}", message.len());
     }
 }
