@@ -51,6 +51,18 @@ where
             Interval::Empty => false,
         }
     }
+    pub fn min_value(&self) -> Option<T> {
+        match self {
+            Interval::Interval(s, _) => Some(*s),
+            Interval::Empty => None,
+        }
+    }
+    pub fn max_value(&self) -> Option<T> {
+        match self {
+            Interval::Interval(_, e) => Some(*e),
+            Interval::Empty => None,
+        }
+    }
 }
 
 impl<T> From<Option<Interval<T>>> for Interval<T>
