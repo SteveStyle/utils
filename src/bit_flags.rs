@@ -45,17 +45,20 @@ impl<T: PrimInt + BitOrAssign + BitAndAssign + IntLog> BitFlags<T> {
     pub fn count_zeros(&self) -> u32 {
         self.0.count_zeros()
     }
+    pub fn is_empty(&self) -> bool {
+        self.0 == T::zero()
+    }
 }
 
 pub struct BitFlagsIterator<'a, T: PrimInt + BitOrAssign> {
     index: usize,
-    highest_bit: usize,
+    highest_bit: Option<usize>,
     bit_flags: &'a BitFlags<T>,
 }
 
 impl<'a, T: PrimInt + BitOrAssign + IntLog> BitFlagsIterator<'a, T> {
     fn new(bit_flags: &'a BitFlags<T>) -> Self {
-        let highest_bit = bit_flags.highest_bit_set().unwrap_or(0);
+        let highest_bit = bit_flags.highest_bit_set();
         Self {
             index: 0,
             highest_bit,
@@ -68,14 +71,13 @@ impl<'a, T: PrimInt + BitOrAssign + BitAndAssign + IntLog> Iterator for BitFlags
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while self.index <= self.highest_bit && !self.bit_flags.get(self.index) {
+        if self.index > self.highest_bit? {
+            return None;
+        }
+        while !self.bit_flags.get(self.index) {
             self.index += 1;
         }
-        let result = if self.bit_flags.get(self.index) {
-            Some(self.index)
-        } else {
-            None
-        };
+        let result = Some(self.index);
         self.index += 1;
         result
     }
