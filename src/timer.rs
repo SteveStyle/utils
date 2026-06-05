@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::hint::black_box;
 use std::time::Instant;
 use std::{ops::Deref, ops::DerefMut, time::Duration};
 
@@ -44,13 +45,16 @@ impl<T: Debug> Timed<T> {
     }
 }
 
-pub fn time<T: Debug, F>(f: F, tag: &str) -> Timed<T>
+pub fn time<T: Debug, F>(mut f: F, tag: &str, warmup: usize) -> Timed<T>
 where
-    F: FnOnce() -> T,
+    F: FnMut() -> T,
 {
     let now = Instant::now();
-    let value = f();
-    let duration = now.elapsed();
+    for _ in 0..warmup {
+        black_box(f());
+    }
+    let value = black_box(f());
+    let duration = now.elapsed() / (warmup as u32 + 1);
     Timed::new(value, duration, tag)
 }
 
@@ -109,10 +113,43 @@ mod tests {
     fn test_time() {
         let a = 5;
         let b = 7;
-        let timed = time(|| a + b, "");
+        let timed = time(|| a + b, "", 0);
         timed.print_duration();
         timed.print_all();
         assert_eq!(*timed, 12);
         assert!(timed.duration > Duration::from_secs(0));
+    }
+
+    #[test]
+    fn test_time_warmup_runs_closure() {
+        let mut count = 0;
+        let timed = time(
+            || {
+                count += 1;
+                count
+            },
+            "",
+            2,
+        );
+
+        assert_eq!(*timed, 3);
+    }
+
+    #[test]
+    fn test_time_averages_over_all_runs() {
+        let mut count = 0;
+        let timed = time(
+            || {
+                count += 1;
+                std::thread::sleep(Duration::from_millis(3));
+                count
+            },
+            "",
+            2,
+        );
+
+        assert_eq!(*timed, 3);
+        assert!(timed.duration() >= Duration::from_millis(2));
+        assert!(timed.duration() < Duration::from_millis(10));
     }
 }
