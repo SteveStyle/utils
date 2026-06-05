@@ -3,6 +3,7 @@ use std::ops::AddAssign;
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct ModularConstraint {
     constraints: Vec<SimpleConstraint>,
+    negative_constraints: Vec<NegativeConstraint>,
 }
 
 impl ModularConstraint {
@@ -14,8 +15,16 @@ impl ModularConstraint {
         &self.constraints
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.constraints.is_empty() && self.negative_constraints.is_empty()
+    }
+
     pub fn add_constraint(&mut self, constraint: SimpleConstraint) {
         self.constraints.push(constraint);
+    }
+
+    pub fn add_negative_constraint(&mut self, constraint: NegativeConstraint) {
+        self.negative_constraints.push(constraint);
     }
 
     pub fn split_by_prime_powers(&mut self) {
@@ -27,55 +36,99 @@ impl ModularConstraint {
     }
 
     pub fn merge_constraints(&mut self) -> Option<()> {
-        if self.constraints.len() <= 1 {
+        if self.constraints.len() + self.negative_constraints.len() <= 1 {
+            if self.constraints.is_empty() && !self.negative_constraints.is_empty() {
+                let negative = self.negative_constraints.pop().expect("checked non-empty");
+                self.constraints.push(negative.to_simple_constraint()?);
+            }
             return Some(());
         }
 
-        let mut constraints = std::mem::take(&mut self.constraints);
-        constraints.sort_by(|left, right| {
+        let mut positive_constraints = std::mem::take(&mut self.constraints);
+        let mut negative_constraints = std::mem::take(&mut self.negative_constraints);
+
+        positive_constraints.sort_by(|left, right| {
             left.modulo
                 .cmp(&right.modulo)
                 .then(left.allowed.cmp(&right.allowed))
         });
-        constraints.dedup();
+        positive_constraints.dedup();
 
-        // Stream same-modulo intersection and cross-modulo merging to avoid
-        // allocating an intermediate grouped vector.
-        let mut constraints = constraints.into_iter();
-        let mut current_group = constraints.next().expect("at least one constraint exists");
+        negative_constraints.sort_by(|left, right| {
+            left.modulo
+                .cmp(&right.modulo)
+                .then(left.forbidden.cmp(&right.forbidden))
+        });
+        negative_constraints.dedup();
+
+        let grouped_positive_constraints = group_positive_constraints(positive_constraints)?;
+        let grouped_negative_constraints = group_negative_constraints(negative_constraints);
+
+        let mut positive_index = 0;
+        let mut negative_index = 0;
         let mut merged: Option<SimpleConstraint> = None;
 
-        for constraint in constraints {
-            if current_group.modulo == constraint.modulo {
-                if !current_group.intersect_same_modulo(&constraint) {
-                    return None;
+        while positive_index < grouped_positive_constraints.len()
+            || negative_index < grouped_negative_constraints.len()
+        {
+            let next_constraint = match (
+                grouped_positive_constraints.get(positive_index),
+                grouped_negative_constraints.get(negative_index),
+            ) {
+                (Some(positive), Some(negative)) if positive.modulo == negative.modulo => {
+                    let mut combined = positive.clone();
+                    combined.try_add_assign_negative(negative)?;
+                    positive_index += 1;
+                    negative_index += 1;
+                    combined
                 }
-                continue;
-            }
+                (Some(positive), Some(negative)) if positive.modulo < negative.modulo => {
+                    positive_index += 1;
+                    positive.clone()
+                }
+                (Some(_), Some(negative)) => {
+                    negative_index += 1;
+                    negative.to_simple_constraint()?
+                }
+                (Some(positive), None) => {
+                    positive_index += 1;
+                    positive.clone()
+                }
+                (None, Some(negative)) => {
+                    negative_index += 1;
+                    negative.to_simple_constraint()?
+                }
+                (None, None) => break,
+            };
 
             if let Some(accumulated) = merged.as_mut() {
-                accumulated.try_add_assign(current_group)?;
+                accumulated.try_add_assign(next_constraint)?;
             } else {
-                merged = Some(current_group);
+                merged = Some(next_constraint);
             }
-            current_group = constraint;
         }
 
-        if let Some(accumulated) = merged.as_mut() {
-            accumulated.try_add_assign(current_group)?;
-        } else {
-            merged = Some(current_group);
-        }
-
-        let merged = merged.expect("at least one constraint exists");
-        self.constraints.push(merged);
+        self.constraints.clear();
+        self.negative_constraints.clear();
+        self.constraints
+            .push(merged.expect("at least one constraint exists"));
         Some(())
+    }
+
+    pub fn min_allowed(&self) -> Option<u64> {
+        self.constraints.first().and_then(SimpleConstraint::min_allowed)
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SimpleConstraint {
     allowed: Vec<u64>,
+    pub modulo: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct NegativeConstraint {
+    forbidden: Vec<u64>,
     pub modulo: u64,
 }
 
@@ -89,25 +142,9 @@ impl SimpleConstraint {
     }
 
     pub fn new_forbidden(modulo: u64, forbidden: Vec<u64>) -> Self {
-        assert!(modulo > 0, "modulo must be non-zero");
-        let forbidden = normalize_values(forbidden, modulo);
-
-        if forbidden.is_empty() {
-            return Self::new_allowed(modulo, (0..modulo).collect());
-        }
-
-        let mut allowed = Vec::with_capacity(modulo as usize - forbidden.len());
-        let mut forbidden_iter = forbidden.iter().copied().peekable();
-
-        for value in 0..modulo {
-            if forbidden_iter.peek() == Some(&value) {
-                forbidden_iter.next();
-            } else {
-                allowed.push(value);
-            }
-        }
-
-        Self::new_allowed(modulo, allowed)
+        NegativeConstraint::new_forbidden(modulo, forbidden)
+            .to_simple_constraint()
+            .expect("forbidden values eliminate all residues")
     }
 
     pub fn from_forbidden_value(value: u64, modulo: u64) -> Self {
@@ -146,6 +183,14 @@ impl SimpleConstraint {
     }
 
     pub fn try_add_assign(&mut self, rhs: Self) -> Option<()> {
+        if self.modulo == rhs.modulo {
+            return if self.intersect_same_modulo(&rhs) {
+                Some(())
+            } else {
+                None
+            };
+        }
+
         let new_modulo = lcm(self.modulo, rhs.modulo);
         let mut new_values = Vec::new();
 
@@ -176,6 +221,18 @@ impl SimpleConstraint {
         Some(())
     }
 
+    pub fn try_add_assign_negative(&mut self, rhs: &NegativeConstraint) -> Option<()> {
+        if self.modulo == rhs.modulo {
+            return if self.subtract_same_modulo(rhs) {
+                Some(())
+            } else {
+                None
+            };
+        }
+
+        self.try_add_assign(rhs.to_simple_constraint()?)
+    }
+
     fn intersect_same_modulo(&mut self, rhs: &Self) -> bool {
         debug_assert_eq!(self.modulo, rhs.modulo);
 
@@ -202,6 +259,101 @@ impl SimpleConstraint {
         self.allowed = intersected;
         true
     }
+
+    fn subtract_same_modulo(&mut self, rhs: &NegativeConstraint) -> bool {
+        debug_assert_eq!(self.modulo, rhs.modulo);
+
+        let mut allowed_index = 0;
+        let mut forbidden_index = 0;
+        let mut retained = Vec::with_capacity(self.allowed.len());
+
+        while allowed_index < self.allowed.len() {
+            while forbidden_index < rhs.forbidden.len()
+                && rhs.forbidden[forbidden_index] < self.allowed[allowed_index]
+            {
+                forbidden_index += 1;
+            }
+
+            if forbidden_index >= rhs.forbidden.len()
+                || rhs.forbidden[forbidden_index] != self.allowed[allowed_index]
+            {
+                retained.push(self.allowed[allowed_index]);
+            }
+
+            allowed_index += 1;
+        }
+
+        if retained.is_empty() {
+            return false;
+        }
+
+        self.allowed = retained;
+        true
+    }
+}
+
+impl NegativeConstraint {
+    pub fn new_forbidden(modulo: u64, forbidden: Vec<u64>) -> Self {
+        assert!(modulo > 0, "modulo must be non-zero");
+        Self {
+            forbidden: normalize_values(forbidden, modulo),
+            modulo,
+        }
+    }
+
+    pub fn from_forbidden_value(value: u64, modulo: u64) -> Self {
+        Self::new_forbidden(modulo, vec![value])
+    }
+
+    pub fn to_simple_constraint(&self) -> Option<SimpleConstraint> {
+        if self.forbidden.len() as u64 == self.modulo {
+            return None;
+        }
+
+        let mut allowed = Vec::with_capacity(self.modulo as usize - self.forbidden.len());
+        let mut forbidden_iter = self.forbidden.iter().copied().peekable();
+
+        for value in 0..self.modulo {
+            if forbidden_iter.peek() == Some(&value) {
+                forbidden_iter.next();
+            } else {
+                allowed.push(value);
+            }
+        }
+
+        Some(SimpleConstraint::new_allowed(self.modulo, allowed))
+    }
+
+    fn union_same_modulo(&mut self, rhs: &Self) {
+        debug_assert_eq!(self.modulo, rhs.modulo);
+
+        let mut left = 0;
+        let mut right = 0;
+        let mut unioned = Vec::with_capacity(self.forbidden.len() + rhs.forbidden.len());
+
+        while left < self.forbidden.len() && right < rhs.forbidden.len() {
+            match self.forbidden[left].cmp(&rhs.forbidden[right]) {
+                std::cmp::Ordering::Less => {
+                    unioned.push(self.forbidden[left]);
+                    left += 1;
+                }
+                std::cmp::Ordering::Greater => {
+                    unioned.push(rhs.forbidden[right]);
+                    right += 1;
+                }
+                std::cmp::Ordering::Equal => {
+                    unioned.push(self.forbidden[left]);
+                    left += 1;
+                    right += 1;
+                }
+            }
+        }
+
+        unioned.extend_from_slice(&self.forbidden[left..]);
+        unioned.extend_from_slice(&rhs.forbidden[right..]);
+        unioned.dedup();
+        self.forbidden = unioned;
+    }
 }
 
 impl AddAssign for SimpleConstraint {
@@ -209,6 +361,57 @@ impl AddAssign for SimpleConstraint {
         self.try_add_assign(rhs)
             .expect("constraints are unsatisfiable after merge");
     }
+}
+
+impl AddAssign<NegativeConstraint> for SimpleConstraint {
+    fn add_assign(&mut self, rhs: NegativeConstraint) {
+        self.try_add_assign_negative(&rhs)
+            .expect("constraints are unsatisfiable after merge");
+    }
+}
+
+fn group_positive_constraints(
+    constraints: Vec<SimpleConstraint>,
+) -> Option<Vec<SimpleConstraint>> {
+    let mut grouped_constraints = Vec::new();
+    let mut constraints = constraints.into_iter();
+
+    if let Some(mut current_group) = constraints.next() {
+        for constraint in constraints {
+            if current_group.modulo == constraint.modulo {
+                if !current_group.intersect_same_modulo(&constraint) {
+                    return None;
+                }
+                continue;
+            }
+
+            grouped_constraints.push(current_group);
+            current_group = constraint;
+        }
+        grouped_constraints.push(current_group);
+    }
+
+    Some(grouped_constraints)
+}
+
+fn group_negative_constraints(constraints: Vec<NegativeConstraint>) -> Vec<NegativeConstraint> {
+    let mut grouped_constraints = Vec::new();
+    let mut constraints = constraints.into_iter();
+
+    if let Some(mut current_group) = constraints.next() {
+        for constraint in constraints {
+            if current_group.modulo == constraint.modulo {
+                current_group.union_same_modulo(&constraint);
+                continue;
+            }
+
+            grouped_constraints.push(current_group);
+            current_group = constraint;
+        }
+        grouped_constraints.push(current_group);
+    }
+
+    grouped_constraints
 }
 
 fn solve_pair(a: u64, m: u64, b: u64, n: u64) -> Option<u64> {
@@ -350,5 +553,28 @@ mod tests {
         constraints.add_constraint(SimpleConstraint::new_forbidden(2, vec![0]));
 
         assert!(constraints.merge_constraints().is_none());
+    }
+
+    #[test]
+    fn negative_constraint_subtracts_same_modulo_values() {
+        let mut constraint = SimpleConstraint::new_allowed(6, vec![0, 2, 4]);
+        constraint += NegativeConstraint::new_forbidden(6, vec![2, 4]);
+
+        assert_eq!(constraint.modulo, 6);
+        assert_eq!(constraint.min_allowed(), Some(0));
+        assert_eq!(constraint.allowed_count(), 1);
+    }
+
+    #[test]
+    fn modular_constraint_merges_grouped_negative_constraints() {
+        let mut constraints = ModularConstraint::new();
+        constraints.add_negative_constraint(NegativeConstraint::from_forbidden_value(1, 2));
+        constraints.add_negative_constraint(NegativeConstraint::from_forbidden_value(0, 4));
+        constraints.add_negative_constraint(NegativeConstraint::from_forbidden_value(2, 6));
+        constraints.add_negative_constraint(NegativeConstraint::from_forbidden_value(4, 6));
+
+        constraints.merge_constraints().unwrap();
+
+        assert_eq!(constraints.min_allowed(), Some(6));
     }
 }
