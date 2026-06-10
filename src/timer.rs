@@ -3,6 +3,8 @@ use std::hint::black_box;
 use std::time::Instant;
 use std::{ops::Deref, ops::DerefMut, time::Duration};
 
+pub const DEFAULT_WARMUP: usize = 0;
+
 pub struct Timed<T: Debug> {
     value: T,
     duration: Duration,
@@ -49,13 +51,66 @@ pub fn time<T: Debug, F>(mut f: F, tag: &str, warmup: usize) -> Timed<T>
 where
     F: FnMut() -> T,
 {
-    let now = Instant::now();
-    for _ in 0..warmup {
-        black_box(f());
+    let runs = warmup + 1;
+    let mut durations = Vec::with_capacity(runs);
+
+    let first_start = Instant::now();
+    let mut value = black_box(f());
+    durations.push(first_start.elapsed());
+
+    for _ in 1..runs {
+        let run_start = Instant::now();
+        value = black_box(f());
+        durations.push(run_start.elapsed());
     }
-    let value = black_box(f());
-    let duration = now.elapsed() / (warmup as u32 + 1);
+
+    durations.sort_unstable();
+    let mid = durations.len() / 2;
+    let duration = if durations.len() % 2 == 1 {
+        durations[mid]
+    } else {
+        (durations[mid - 1] + durations[mid]) / 2
+    };
+
     Timed::new(value, duration, tag)
+}
+
+pub fn inferred_tag_from_closure(closure: &str) -> String {
+    let trimmed = closure.trim();
+
+    if let Some(rest) = trimmed.strip_prefix("||") {
+        let tag = rest.trim();
+        return if tag.is_empty() {
+            trimmed.to_string()
+        } else {
+            tag.to_string()
+        };
+    }
+
+    if let Some(stripped) = trimmed.strip_prefix('|')
+        && let Some(end) = stripped.find('|')
+    {
+        let tag = stripped[end + 1..].trim();
+        return if tag.is_empty() {
+            trimmed.to_string()
+        } else {
+            tag.to_string()
+        };
+    }
+
+    trimmed.to_string()
+}
+
+#[macro_export]
+macro_rules! time {
+    ($closure:expr) => {{
+        let __tag = $crate::timer::inferred_tag_from_closure(stringify!($closure));
+        $crate::timer::time($closure, &__tag, $crate::timer::DEFAULT_WARMUP)
+    }};
+    ($closure:expr, $warmup:expr $(,)?) => {{
+        let __tag = $crate::timer::inferred_tag_from_closure(stringify!($closure));
+        $crate::timer::time($closure, &__tag, $warmup)
+    }};
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -136,7 +191,7 @@ mod tests {
     }
 
     #[test]
-    fn test_time_averages_over_all_runs() {
+    fn test_time_uses_median_over_all_runs() {
         let mut count = 0;
         let timed = time(
             || {
@@ -151,5 +206,36 @@ mod tests {
         assert_eq!(*timed, 3);
         assert!(timed.duration() >= Duration::from_millis(2));
         assert!(timed.duration() < Duration::from_millis(10));
+    }
+
+    #[test]
+    fn test_inferred_tag_from_closure() {
+        assert_eq!(inferred_tag_from_closure("|| a + b"), "a + b");
+        assert_eq!(inferred_tag_from_closure("|x| x + 1"), "x + 1");
+    }
+
+    #[test]
+    fn test_time_macro_uses_default_warmup() {
+        let mut count = 0;
+        let timed = crate::time!(|| {
+            count += 1;
+            count
+        });
+
+        assert_eq!(*timed, DEFAULT_WARMUP + 1);
+    }
+
+    #[test]
+    fn test_time_macro_accepts_warmup_override() {
+        let mut count = 0;
+        let timed = crate::time!(
+            || {
+                count += 1;
+                count
+            },
+            2,
+        );
+
+        assert_eq!(*timed, 3);
     }
 }

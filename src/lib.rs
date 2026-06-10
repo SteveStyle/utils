@@ -14,6 +14,7 @@ pub mod pos3d;
 pub mod smallest_items;
 pub mod smallvec;
 pub mod timer;
+pub mod vector3;
 
 /// To use this crate, add `stephen-morris_utils = { path = "stephen-morris-utils" }` to the dependencies in Cargo.toml.
 /// Alternatively, use the git repository by adding 'utils = { git = "https://github.com/SteveStyle/utils.git" }'
