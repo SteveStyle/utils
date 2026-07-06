@@ -2,6 +2,7 @@ use regex::Regex;
 use std::str::FromStr;
 
 pub mod bit_flags;
+pub mod circular_list;
 pub mod fixed_queue;
 pub mod grid;
 pub mod indexed_key_table;
