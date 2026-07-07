@@ -3,7 +3,7 @@ use std::hint::black_box;
 use std::time::Instant;
 use std::{ops::Deref, ops::DerefMut, time::Duration};
 
-pub const DEFAULT_WARMUP: usize = 0;
+pub const DEFAULT_RUNS: usize = 1;
 
 pub struct Timed<T: Debug> {
     value: T,
@@ -47,21 +47,19 @@ impl<T: Debug> Timed<T> {
     }
 }
 
-pub fn time<T: Debug, F>(mut f: F, tag: &str, warmup: usize) -> Timed<T>
+pub fn time<T: Debug, F>(mut f: F, tag: &str, runs: usize) -> Timed<T>
 where
     F: FnMut() -> T,
 {
-    let runs = warmup + 1;
+    let runs = runs.max(1);
     let mut durations = Vec::with_capacity(runs);
 
-    let first_start = Instant::now();
-    let mut value = black_box(f());
-    durations.push(first_start.elapsed());
-
-    for _ in 1..runs {
+    let mut value = None;
+    for _ in 0..runs {
         let run_start = Instant::now();
-        value = black_box(f());
+        let run_value = black_box(f());
         durations.push(run_start.elapsed());
+        value = Some(run_value);
     }
 
     durations.sort_unstable();
@@ -72,7 +70,7 @@ where
         (durations[mid - 1] + durations[mid]) / 2
     };
 
-    Timed::new(value, duration, tag)
+    Timed::new(value.expect("runs is at least one"), duration, tag)
 }
 
 pub fn inferred_tag_from_closure(closure: &str) -> String {
@@ -105,11 +103,11 @@ pub fn inferred_tag_from_closure(closure: &str) -> String {
 macro_rules! time {
     ($closure:expr) => {{
         let __tag = $crate::timer::inferred_tag_from_closure(stringify!($closure));
-        $crate::timer::time($closure, &__tag, $crate::timer::DEFAULT_WARMUP)
+        $crate::timer::time($closure, &__tag, $crate::timer::DEFAULT_RUNS)
     }};
-    ($closure:expr, $warmup:expr $(,)?) => {{
+    ($closure:expr, $runs:expr $(,)?) => {{
         let __tag = $crate::timer::inferred_tag_from_closure(stringify!($closure));
-        $crate::timer::time($closure, &__tag, $warmup)
+        $crate::timer::time($closure, &__tag, $runs)
     }};
 }
 
@@ -176,7 +174,7 @@ mod tests {
     }
 
     #[test]
-    fn test_time_warmup_runs_closure() {
+    fn test_time_runs_closure_requested_times() {
         let mut count = 0;
         let timed = time(
             || {
@@ -187,11 +185,11 @@ mod tests {
             2,
         );
 
-        assert_eq!(*timed, 3);
+        assert_eq!(*timed, 2);
     }
 
     #[test]
-    fn test_time_uses_median_over_all_runs() {
+    fn test_time_uses_median_over_measured_runs() {
         let mut count = 0;
         let timed = time(
             || {
@@ -203,7 +201,7 @@ mod tests {
             2,
         );
 
-        assert_eq!(*timed, 3);
+        assert_eq!(*timed, 2);
         assert!(timed.duration() >= Duration::from_millis(2));
         assert!(timed.duration() < Duration::from_millis(10));
     }
@@ -215,18 +213,18 @@ mod tests {
     }
 
     #[test]
-    fn test_time_macro_uses_default_warmup() {
+    fn test_time_macro_uses_default_runs() {
         let mut count = 0;
         let timed = crate::time!(|| {
             count += 1;
             count
         });
 
-        assert_eq!(*timed, DEFAULT_WARMUP + 1);
+        assert_eq!(*timed, DEFAULT_RUNS);
     }
 
     #[test]
-    fn test_time_macro_accepts_warmup_override() {
+    fn test_time_macro_accepts_runs_override() {
         let mut count = 0;
         let timed = crate::time!(
             || {
@@ -236,6 +234,6 @@ mod tests {
             2,
         );
 
-        assert_eq!(*timed, 3);
+        assert_eq!(*timed, 2);
     }
 }
