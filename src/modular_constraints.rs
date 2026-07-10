@@ -116,7 +116,9 @@ impl ModularConstraint {
     }
 
     pub fn min_allowed(&self) -> Option<u64> {
-        self.constraints.first().and_then(SimpleConstraint::min_allowed)
+        self.constraints
+            .first()
+            .and_then(SimpleConstraint::min_allowed)
     }
 }
 
@@ -370,9 +372,7 @@ impl AddAssign<NegativeConstraint> for SimpleConstraint {
     }
 }
 
-fn group_positive_constraints(
-    constraints: Vec<SimpleConstraint>,
-) -> Option<Vec<SimpleConstraint>> {
+fn group_positive_constraints(constraints: Vec<SimpleConstraint>) -> Option<Vec<SimpleConstraint>> {
     let mut grouped_constraints = Vec::new();
     let mut constraints = constraints.into_iter();
 

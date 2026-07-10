@@ -1,7 +1,7 @@
 [package]
 name = "srm-utils"
 version = "0.2.3"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
 thiserror="2"

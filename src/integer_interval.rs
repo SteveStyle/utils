@@ -200,8 +200,8 @@ where
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
-    pub fn iter(&self) -> impl Iterator<Item = Interval<T>> {
-        self.0.iter().filter_map(|&i| i.as_option())
+    pub fn iter(&self) -> Box<dyn Iterator<Item = Interval<T>> + '_> {
+        Box::new(self.0.iter().filter_map(|&i| i.as_option()))
     }
     pub fn clear(&mut self) {
         self.0.clear();

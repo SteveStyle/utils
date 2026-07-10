@@ -85,15 +85,15 @@ pub fn inferred_tag_from_closure(closure: &str) -> String {
         };
     }
 
-    if let Some(stripped) = trimmed.strip_prefix('|')
-        && let Some(end) = stripped.find('|')
-    {
-        let tag = stripped[end + 1..].trim();
-        return if tag.is_empty() {
-            trimmed.to_string()
-        } else {
-            tag.to_string()
-        };
+    if let Some(stripped) = trimmed.strip_prefix('|') {
+        if let Some(end) = stripped.find('|') {
+            let tag = stripped[end + 1..].trim();
+            return if tag.is_empty() {
+                trimmed.to_string()
+            } else {
+                tag.to_string()
+            };
+        }
     }
 
     trimmed.to_string()
